@@ -14,6 +14,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static io.restassured.RestAssured.given;
 import static io.restassured.config.LogConfig.logConfig;
 import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
@@ -27,31 +30,33 @@ public class BookingTest {
     private static User user;
 
     @BeforeAll
-    public static void Setup(){
+    public static void Setup() {
         RestAssured.baseURI = "https://restful-booker.herokuapp.com";
         faker = new Faker();
         user = new User(faker.name().username(),
                 faker.name().firstName(),
                 faker.name().lastName(),
                 faker.internet().safeEmailAddress(),
-                faker.internet().password(6,10),
+                faker.internet().password(6, 10),
                 faker.phoneNumber().toString());
 
         bookingDates = new BookingDates("2022-01-02", "2022-01-03");
         booking = new Booking(user.getFirstName(), user.getLastName(),
-                (float)faker.number().randomDouble(2, 50, 100000),
-                true,bookingDates,
+                (float) faker.number().randomDouble(2, 50, 100000),
+                true, bookingDates,
                 "");
-        RestAssured.filters(new RequestLoggingFilter(),new ResponseLoggingFilter(), new ErrorLoggingFilter());
+        RestAssured.filters(new RequestLoggingFilter(), new ResponseLoggingFilter(), new ErrorLoggingFilter());
     }
+
     @BeforeEach
-    void setRequest(){
+    void setRequest() {
         request = given().config(RestAssured.config().logConfig(logConfig().enableLoggingOfRequestAndResponseIfValidationFails()))
                 .contentType(ContentType.JSON)
                 .auth().basic("admin", "password123");
     }
+
     @Test
-    public void getAllBookingsById_returnOk(){
+    public void getAllBookingsById_returnOk() {
         Response response = request
                 .when()
                 .get("/booking")
@@ -59,13 +64,12 @@ public class BookingTest {
                 .extract()
                 .response();
 
-
         Assertions.assertNotNull(response);
         Assertions.assertEquals(200, response.statusCode());
     }
 
     @Test
-    public void  getAllBookingsByUserFirstName_BookingExists_returnOk(){
+    public void getAllBookingsByUserFirstName_BookingExists_returnOk() {
         request
                 .when()
                 .queryParam("firstName", "eduarda")
@@ -80,7 +84,7 @@ public class BookingTest {
     }
 
     @Test
-    public void  CreateBooking_WithValidData_returnOk(){
+    public void CreateBooking_WithValidData_returnOk() {
 
         Booking test = booking;
         given().config(RestAssured.config().logConfig(logConfig().enableLoggingOfRequestAndResponseIfValidationFails()))
@@ -95,4 +99,22 @@ public class BookingTest {
                 .statusCode(200)
                 .contentType(ContentType.JSON).and().time(lessThan(2000L));
     }
+    @Test
+    public void CreateAuthToken(){
+        Map<String, String> body = new HashMap<>();
+        body.put("username", "admin");
+        body.put("password", "password123");
+
+        request
+                .contentType(ContentType.JSON)
+                .when()
+                .body(body)
+                .post("/auth")
+                .then()
+                .assertThat()
+                .statusCode(200)
+                .extract()
+                .path("token");
+    }
+
 }
